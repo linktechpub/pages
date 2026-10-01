@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<!-- ==========================================================================
+     HCW HTML Slide Guideline v2.2
+     --------------------------------------------------------------------------
+     형식    단일 HTML 파일 슬라이드 덱 · 2계층 자작 엔진(기본/상세)
+             외부 의존 0 · UTF-8(BOM 없음) + CRLF · 1280x720 고정 캔버스
+     변형    로고 없는 판 — 표지 오른쪽은 빈 흰 사각형이다.
+             (index.html = images/ 참조 · index2.html = 로고 내장)
+     버전    v2.2 (2026-09-20)
+     규정    엔진 계약 + 표지(첫 장) · 마무리(마지막 장).
+             그 사이 중간 슬라이드의 형식은 규정하지 않는다(작성자 재량).
+     조작    → ← PgDn PgUp Space  기본 이동      ↓ ↑        상세 진입 / 복귀
+             Home End 숫자+Enter  처음/끝/점프
+             O 개요   C 목차      N 노트         ? / H      도움말
+             F 전체화면  B 블랙아웃  E 편집       Ctrl+S 저장  Ctrl+P 인쇄
+             Esc 는 닫기·빠져나오기 전용 — 아무것도 열려 있지 않으면 무동작
+     근거    AiCollabDocs/Specifications/
+             20260920_1414_GDLN_HCW_HTML_Slide_Guideline_v2.2.md
+     템플릿  html-slide/Template/index.html  (+ 같은 폴더의 사용 지침 v2.2)
+     --------------------------------------------------------------------------
+     고치는 곳은 #stage 안의 <section class="slide"> 내용뿐이다.
+     <script> 블록 · 엔진 CSS · #stage 밖 크롬(#menuBtn #bar #ind #ovw #toc
+     #help #notes #blank #toast)은 건드리지 않는다 — 지우면 스크립트가 죽는다.
+     ========================================================================== -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>발표 제목 — 부제</title>
+<meta name="author" content="이름">
+<meta name="description" content="회사명 부서명 · 발표 주제 한 줄 요약 · 발표용 슬라이드">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23D99B2E'/%3E%3Crect x='7' y='17' width='4.6' height='8' fill='%230E1A2B'/%3E%3Crect x='13.7' y='12' width='4.6' height='13' fill='%230E1A2B'/%3E%3Crect x='20.4' y='7' width='4.6' height='18' fill='%230E1A2B'/%3E%3C/svg%3E">
+<style>
+/* ===== 1. 디자인 토큰 — 슬라이드별 고정 테마 =====
+   테마 전환 기능은 두지 않는다. 표지·마무리는 Dark, 본문은 Light 로 고정한다
+   ("샌드위치" 구조 — 어두운 표지로 열고 밝은 본문으로 읽히고 어두운 마무리로 닫는다).
+   :root 는 Dark 값이자 UI 크롬(오버레이·드로어·노트 패널)의 값이기도 하다.
+   대비: Dark muted 8.7:1 · acc 8.9:1 · acc2 8.1:1 / Light muted 7.0:1 · acc 4.8:1 · acc2 6.4:1 */
+:root{
+  --bg:#0E1A2B; --fg:#E8EDF5; --muted:#A9B7C9;
+  --acc:#E8B04B; --acc2:#4FC3A7; --warn:#FF6B6B;
+  --card:rgba(255,255,255,.055); --line:rgba(255,255,255,.13);
+  /* 노트 패널은 거의 불투명하게 — 반투명이면 아래의 진행 표시가 비쳐 글자가 겹쳐 보인다 */
+  --panel:rgba(6,12,20,.97);
+  --tint:rgba(217,155,46,.13);          /* 주력 카드 앰버 워시 */
+}
+/* 본문 슬라이드 — 카드·표가 많아 Light 가 회의실 프로젝터에서 읽기 좋다.
+   토큰을 슬라이드 단위로 재정의하므로 내부 요소는 고칠 것이 없다. */
+.slide.light{
+  --bg:#F3F6F9; --fg:#0E1A2B; --muted:#4B5563;
+  --acc:#8F6414; --acc2:#126554; --warn:#B5301F;
+  --card:rgba(0,0,0,.04); --line:rgba(0,0,0,.14);
+  --tint:rgba(217,155,46,.16);
+}
+/* 진행 표시·힌트는 화면 고정 요소라 슬라이드 배경 위에 얹힌다.
+   혼합 테마 덱이므로 현재 슬라이드 테마를 따라가지 않으면 대비가 무너진다.
+   render() 가 body[data-ui] 를 갱신한다. */
+body{--ui-fg:#E8EDF5; --ui-muted:#A9B7C9; --ui-acc:#E8B04B; --ui-acc2:#4FC3A7; --ui-warn:#FF6B6B}
+body[data-ui="light"]{--ui-fg:#0E1A2B; --ui-muted:#4B5563; --ui-acc:#8F6414;
+  --ui-acc2:#126554; --ui-warn:#B5301F}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:system-ui,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+  -webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
+
+/* ===== 2. 무대 1280x720 ===== */
+#stage{position:fixed;left:50%;top:50%;width:1280px;height:720px;
+  transform-origin:center center}
+.slide{position:absolute;inset:0;padding:64px 64px 70px;display:flex;
+  flex-direction:column;justify-content:center;
+  background:var(--bg);color:var(--fg);        /* 슬라이드마다 제 테마로 칠한다 */
+  opacity:0;visibility:hidden;transition:opacity .28s ease,visibility .28s}
+.slide.on{opacity:1;visibility:visible}
+.slide .notes{display:none}
+@media (prefers-reduced-motion:reduce){.slide{transition:none}}
+
+h1{font-size:56px;margin:0 0 14px;letter-spacing:-.03em;line-height:1.16}
+h2{font-size:34px;margin:0 0 8px;letter-spacing:-.02em;line-height:1.2}
+h3{font-size:19px;margin:0}
+p,li{font-size:23px;line-height:1.62}
+ul{margin:0;padding-left:1.15em} li{margin:9px 0}
+.sub{font-size:24px;color:var(--acc);margin:0 0 24px}
+.meta{font-size:15px;color:var(--muted);line-height:1.8}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+b,strong{font-weight:700;color:var(--fg)}
+code,.mo{font-family:ui-monospace,"Cascadia Mono",Consolas,"Courier New",monospace;
+  font-weight:700;color:var(--acc2);font-size:.94em}
+
+/* ===== 3. 업무 슬라이드 레이아웃 ===== */
+/* 제목을 위로 붙이고 카드가 남는 높이를 나눠 갖게 한다 (본문 586px 기준 약 496px) */
+.slide.work{justify-content:flex-start}
+.slide.work .lede{font-size:17px;line-height:1.5;color:var(--muted);margin:0 0 16px}
+
+/* 과제 트랙 카드 — style="flex:NN" 으로 중요도 비중(%)을 준다.
+   flex 단축값은 flex-basis:0 이므로 grow 값의 비율이 곧 높이 배분이다. */
+.trks{display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.trk{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;
+  gap:7px;background:var(--card);border:1px solid var(--line);
+  border-left:5px solid var(--acc);border-radius:10px;padding:12px 18px}
+.trk .hd{display:flex;align-items:baseline;gap:12px}
+.trk .idx{flex:none;font-size:15px;font-weight:700;color:var(--acc);
+  font-variant-numeric:tabular-nums}
+.trk h3{flex:1;min-width:0;font-size:19px;line-height:1.25;font-weight:700;
+  color:var(--fg);letter-spacing:-.01em}
+.trk .lead{margin:0;font-size:14px;line-height:1.55;color:var(--muted)}
+.trk .lead b{color:var(--fg)}
+
+/* 주력 과제 — 앰버 워시 + 두꺼운 좌측 바 + 큰 제목 */
+.trk.hero{background:var(--tint);border-left-width:8px;padding:14px 20px}
+.trk.hero h3{font-size:23px}
+.trk.hero .idx{font-size:16px}
+.trk.hero ul.mini li{font-size:15px}
+
+/* 비중이 작은 과제 — 한 줄 요약 행 */
+.trk.row{flex-direction:row;align-items:center;gap:12px;padding:0 16px 0 14px}
+.trk.row .idx{font-size:13px}
+.trk.row h3{flex:none;font-size:16px}
+.trk.row .sum{margin:0;font-size:14px;line-height:1.4;color:var(--muted);
+  flex:1;min-width:0;display:-webkit-box;-webkit-box-orient:vertical;
+  -webkit-line-clamp:2;overflow:hidden}
+.trk.row .sum b{color:var(--fg)}
+.trk.row .when{font-size:11.5px;padding:2px 8px}
+.trk.row .st{font-size:11px;padding:2px 8px}
+
+/* 카드 높이가 줄어든 자리에서 불릿을 촘촘하게 — 30% 카드용 */
+.trk.tight{padding:12px 20px;gap:6px}
+.trk.tight ul.mini{gap:4px}
+.trk.tight ul.mini li{line-height:1.45}
+
+/* 요약(기본) 슬라이드 — 여백이 넉넉하므로 활자를 키우고 핵심 수치를 세운다 */
+.trk.simple{flex-direction:row;align-items:center;gap:26px}
+.trk.simple .main{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px}
+.trk.simple h3{font-size:22px}
+.trk.simple .lead{font-size:15.5px}
+.trk.simple.hero h3{font-size:34px}
+.trk.simple.hero .lead{font-size:19.5px}
+.trk.simple .stat{flex:none;text-align:right;border-left:1px solid var(--line);
+  padding-left:26px}
+.trk.simple .stat .lb{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.14em;
+  color:var(--acc)}
+.trk.simple .stat .vl{margin:4px 0 0;font-size:27px;line-height:1.05;font-weight:700;
+  color:var(--fg);white-space:nowrap;font-variant-numeric:tabular-nums}
+.trk.simple.hero .stat .vl{font-size:46px}
+
+/* 기간 칩 · 상태 배지 — 바탕을 --bg 로 두어 일반 카드와 앰버 카드 양쪽에서 또렷하다 */
+.when{flex:none;white-space:nowrap;font-size:12.5px;font-weight:700;color:var(--acc);
+  background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:3px 10px;
+  font-variant-numeric:tabular-nums}
+.st{flex:none;white-space:nowrap;font-size:11.5px;font-weight:700;letter-spacing:.06em;
+  background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:3px 9px}
+.st.done{color:var(--acc2)}
+.st.run{color:var(--acc)}
+.st.key{background:var(--acc);border-color:var(--acc);color:var(--bg)}  /* 주력 */
+
+/* 카드 안 세부 항목 */
+ul.mini{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+ul.mini li{position:relative;margin:0;padding-left:16px;font-size:14.5px;line-height:1.5;
+  color:var(--muted)}
+ul.mini li::before{content:"";position:absolute;left:0;top:.6em;width:6px;height:6px;
+  background:var(--acc);border-radius:1px}
+ul.mini li b{color:var(--fg)}
+
+/* ===== 4. 표지 · 마무리 ===== */
+.edge{position:absolute;left:0;top:0;bottom:0;width:18px;background:var(--acc)}
+.slide.cover{justify-content:center;padding-left:104px}
+.cover .kick{margin:0 0 14px;font-size:13px;font-weight:700;letter-spacing:.28em;
+  color:var(--acc)}
+.cover h1{max-width:760px}
+.cover h1 span{display:block;font-size:34px;font-weight:500;color:var(--muted);
+  letter-spacing:0;margin-top:14px}
+.cover .rule{width:96px;height:5px;background:var(--acc);margin:34px 0 24px}
+.cover .who{margin:0;font-size:17px;font-weight:700}
+.logo{position:absolute;right:104px;top:50%;transform:translateY(-50%);width:216px;
+  text-align:center}
+/* 로고 자리 — 흰 바탕 사각형만 둔다.
+   이미지를 쓸 때는 .plate 안에 <img src="images/로고.png" alt="회사명 로고"> 를 넣고
+   아래 height 를 지운 뒤 padding:22px 20px 와 img 규칙을 되살린다.
+   .logo .plate img{display:block;width:154px;margin:0 auto} */
+.logo .plate{background:#fff;border-radius:10px;height:104px;
+  box-shadow:0 10px 30px rgba(0,0,0,.30)}
+.logo .cap{margin:12px 0 0;font-size:12px;color:var(--muted);
+  font-family:ui-monospace,Consolas,monospace}
+
+.slide.end{align-items:center;text-align:center}
+.end h1{font-size:72px;margin:0}
+.end .rule{width:120px;height:5px;background:var(--acc);margin:30px auto 26px}
+.end .who{margin:0 0 10px;font-size:22px;font-weight:700}
+.end .stats{display:flex;gap:14px;margin:34px 0 0}
+.end .stats div{background:var(--card);border:1px solid var(--line);border-radius:10px;
+  padding:14px 22px;min-width:150px}
+.end .stats .lb{margin:0;font-size:11.5px;font-weight:700;letter-spacing:.14em;
+  color:var(--acc)}
+.end .stats .vl{margin:6px 0 0;font-size:26px;font-weight:700;
+  font-variant-numeric:tabular-nums}
+
+/* ===== 5. 진행 표시 ===== */
+#bar{position:fixed;left:0;bottom:0;height:3px;width:0;background:var(--ui-acc);
+  transition:width .28s ease;z-index:20}
+#ind{position:fixed;right:16px;bottom:10px;z-index:20;font-size:13px;color:var(--ui-muted);
+  font-variant-numeric:tabular-nums}
+#ind b{color:var(--ui-fg);font-weight:600}
+#ind .jump{color:var(--ui-acc2);font-weight:700}
+#ind .edit{color:var(--ui-acc);font-weight:700;margin-right:8px}
+#ind .dirty{color:var(--ui-warn);font-weight:700;margin-right:6px}
+#hintDown,#hintUp{position:fixed;left:50%;transform:translateX(-50%);z-index:20;
+  font-size:12px;color:var(--ui-muted);pointer-events:none}
+#hintDown{bottom:16px} #hintUp{top:10px}
+
+/* ===== 6. 오버레이 ===== */
+.ovl{position:fixed;inset:0;z-index:50;background:var(--bg);overflow:auto;padding:26px}
+#help{z-index:70;background:rgba(0,0,0,.82);display:flex;align-items:center;
+  justify-content:center;padding:0}
+#help .box{background:var(--bg);border:1px solid var(--line);border-radius:14px;
+  padding:26px 32px;font-size:15px;line-height:1.95;max-height:88vh;overflow:auto}
+/* 도움말 — 왼쪽은 분류별 "하려는 일 : 누를 키", 오른쪽은 마우스 9칸 표 */
+#help .box{display:flex;gap:34px;align-items:flex-start;flex-wrap:wrap;
+  padding:22px 26px;line-height:1.5}
+#help .hcol>b{display:block;margin-bottom:11px}
+/* 단축키 16줄을 한 단으로 세우면 720px 창에서 카드가 넘친다 — 두 단으로 접는다 */
+#help .hsplit{display:flex;gap:28px;align-items:flex-start}
+#help .hk{display:grid;grid-template-columns:auto auto;gap:4px 22px;margin:0;
+  line-height:1.45;align-items:center}
+#help .hk dt{color:var(--muted);white-space:nowrap}
+#help .hk dd{margin:0;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+/* 분류 머리말은 두 열을 가로지른다. 짝이 되는 dd 는 마크업만 맞추고 숨긴다 */
+#help .hk dt.g{grid-column:1/-1;margin-top:10px;color:var(--acc);font-size:12px;
+  font-weight:700;letter-spacing:.12em}
+#help .hk dt.g:first-of-type{margin-top:0}
+#help .hk dd.g{display:none}
+/* 3×3 존 표 — 칸의 자리가 곧 화면의 자리다 (§5-3) */
+#help .hz{border-collapse:collapse;table-layout:fixed;width:396px}
+#help .hz td{border:1px solid var(--line);height:58px;padding:5px 8px;
+  text-align:center;vertical-align:middle;font-size:13px;line-height:1.35}
+#help .hz td.off{color:var(--muted);opacity:.45}
+#help .hnote{margin:12px 0 0;width:396px;font-size:12px;line-height:1.6;color:var(--muted)}
+#blank{position:fixed;inset:0;background:#000;z-index:80}
+kbd{background:var(--card);border:1px solid var(--line);border-radius:5px;
+  padding:1px 7px;font:inherit;font-size:13px}
+
+#ovw{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));
+  gap:16px;align-content:start}
+.th{position:relative;border:2px solid var(--line);border-radius:10px;overflow:hidden;
+  cursor:pointer;height:132px;background:var(--bg)}
+.th.sel{border-color:var(--acc)}
+.th .box{position:relative;width:1280px;height:720px;transform:scale(.178);
+  transform-origin:top left;pointer-events:none}
+.th .box .slide{opacity:1!important;visibility:visible!important;transition:none!important}
+/* 썸네일 번호는 Dark·Light 슬라이드 위에 모두 얹히므로 자체 칩 배경으로 대비를 확보한다 */
+.th .no{position:absolute;right:6px;bottom:5px;font-size:11px;font-weight:700;
+  color:#E8EDF5;background:rgba(6,12,20,.74);border-radius:4px;padding:1px 6px}
+
+/* 목차 — 좌측 드로어 (260907_R01 덱 스타일 이식).
+   개요·도움말은 전면 오버레이지만 목차만 드로어다. 항목을 고르는 동안
+   슬라이드가 옆에 그대로 보이는 편이 "어디로 갈지" 고르기 쉽다. */
+#menuBtn{position:fixed;left:18px;top:16px;z-index:30;width:42px;height:42px;
+  border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);
+  border-radius:10px;cursor:pointer;display:grid;place-items:center;gap:4px;
+  opacity:.28;transition:opacity .2s,background .2s}
+#menuBtn:hover,#menuBtn:focus-visible{opacity:1;background:rgba(255,255,255,.14)}
+#menuBtn i{display:block;width:17px;height:2px;background:#fff;border-radius:2px}
+body[data-ui="light"] #menuBtn{border-color:rgba(0,0,0,.20);background:rgba(0,0,0,.05)}
+body[data-ui="light"] #menuBtn:hover,body[data-ui="light"] #menuBtn:focus-visible{
+  background:rgba(0,0,0,.12)}
+body[data-ui="light"] #menuBtn i{background:#0E1A2B}
+
+#toc{position:fixed;left:0;top:0;bottom:0;width:392px;z-index:50;background:#0B1523;
+  border-right:1px solid rgba(255,255,255,.09);display:flex;flex-direction:column;
+  padding:30px 0 22px}
+/* [hidden] 이 display:none!important 로 이기므로 표시될 때만 슬라이드 인 */
+#toc:not([hidden]){animation:tocIn .26s cubic-bezier(.4,0,.2,1)}
+@keyframes tocIn{from{transform:translateX(-100%)}to{transform:none}}
+/* 드로어 밖을 덮는 스크림 — 별도 요소 없이 가상 요소로 둔다 */
+#toc::after{content:"";position:fixed;left:392px;top:0;right:0;bottom:0;
+  background:rgba(6,12,20,.5)}
+#toc:not([hidden])::after{animation:scrimIn .26s ease}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+  #toc:not([hidden]),#toc:not([hidden])::after{animation:none}
+}
+#toc h2{margin:0 30px 4px;font-size:13px;font-weight:700;letter-spacing:.24em;color:#E8B04B}
+#toc .tsub{margin:0 30px 22px;font-size:13px;color:#93A3B5;
+  font-family:ui-monospace,Consolas,monospace}
+#tocNav{flex:1;overflow-y:auto;padding:0 18px}
+#toc ol{list-style:none;margin:0;padding:0}
+#toc li{margin:2px 0}
+#toc .grp{margin:18px 12px 8px;font-size:11px;font-weight:700;letter-spacing:.2em;
+  color:#5C6E85}
+#toc button{display:flex;width:100%;align-items:center;gap:14px;background:none;border:0;
+  font:inherit;font-size:15px;color:#C9D4E1;text-align:left;padding:11px 12px;
+  border-radius:8px;cursor:pointer;border-left:3px solid transparent}
+#toc button:hover{background:rgba(255,255,255,.06);color:#fff}
+#toc button:focus-visible{outline:2px solid #E8B04B;outline-offset:-2px}
+#toc button.cur{background:rgba(217,155,46,.12);color:#fff;border-left-color:#E8B04B}
+#toc button .n{flex:none;width:20px;font-size:12px;color:#5C6E85;
+  font-family:ui-monospace,Consolas,monospace;font-variant-numeric:tabular-nums}
+#toc button.cur .n{color:#E8B04B}
+#toc button.det{padding-left:34px;font-size:13.5px;color:#93A3B5}
+#toc .keys{margin:14px 30px 0;padding-top:16px;border-top:1px solid rgba(255,255,255,.09);
+  font-size:12px;line-height:1.9;color:#7A8CA0}
+#toc .keys kbd{background:rgba(255,255,255,.08);border:0;border-radius:4px;padding:1px 6px;
+  font-size:11px;color:#C9D4E1;font-family:ui-monospace,Consolas,monospace}
+
+#notes{position:fixed;left:0;right:0;bottom:0;max-height:38vh;overflow:auto;z-index:30;
+  background:var(--panel);border-top:2px solid var(--acc);padding:12px 24px 18px;
+  font-size:15px}
+.nhead{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);
+  margin-bottom:8px}
+.nhead b{color:var(--acc);font-size:13px}
+#nview{white-space:pre-wrap;line-height:1.65}
+#nedit:not([hidden]){display:block}
+#nedit{width:100%;min-height:104px;resize:vertical;background:var(--card);color:var(--fg);
+  border:1px solid var(--line);border-radius:8px;padding:10px 12px;
+  font-family:inherit;font-size:15px;line-height:1.65}
+
+/* ===== 7. 편집 모드 ===== */
+.is-editing [data-editable]{cursor:text;outline:1px dashed var(--acc);outline-offset:3px;
+  border-radius:3px}
+.is-editing [data-editable]:focus{outline:2px solid var(--acc);background:var(--card)}
+
+/* ===== 8. 토스트 ===== */
+#toast{position:fixed;left:50%;bottom:54px;transform:translate(-50%,14px);z-index:90;
+  background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:10px;
+  padding:11px 20px;font-size:15px;opacity:0;pointer-events:none;
+  transition:opacity .2s,transform .2s;box-shadow:0 10px 30px rgba(0,0,0,.45)}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+#toast b{color:var(--acc)}
+
+/* ===== 9. 인쇄 ===== */
+@media print{
+  html,body{overflow:visible;height:auto;background:#fff;color:#000}
+  #stage{position:static;width:auto;height:auto;transform:none!important}
+  .slide{position:relative;inset:auto;opacity:1!important;visibility:visible!important;
+    width:1280px;height:720px;page-break-after:always;border:1px solid #ddd}
+  #bar,#ind,#notes,#help,#blank,#toast,#ovw,#toc,#hintDown,#hintUp{display:none!important}
+}
+</style>
+</head>
+<body>
+
+<button id="menuBtn" type="button" aria-label="목차 열기"><i></i><i></i><i></i></button>
+
+<div id="stage">
+
+  <!-- ═══ 기본 1 · 표지 (Dark — light 클래스 없음) ═══ -->
+  <section class="slide cover" data-toc="표지" data-grp="개요">
+    <div class="edge"></div>
+    <p class="kick">발표 구분 · PRESENTATION v2.2</p>
+    <h1>발표 제목<span>부제 한 줄</span></h1>
+    <div class="rule"></div>
+    <p class="who">회사명 · 부서명 · 이름</p>
+    <p class="meta">대상 기간: YYYY-MM-DD ~ MM-DD<br>AI 지원: Claude Code Assistant<br>YYYY-MM-DD</p>
+    <div class="logo">
+      <!-- 로고 자리 — 흰 바탕 사각형. 이미지를 넣으려면 아래 .plate 안에
+           <img src="images/로고.png" alt="회사명 로고"> 를 넣는다 (CSS 주석 참고) -->
+      <div class="plate"></div>
+      <p class="cap">YYYY.MM — YYYY.MM</p>
+    </div>
+    <aside class="notes">
+      표지 슬라이드의 발표자 노트입니다. N 키로 열고 닫습니다.
+
+      기본 슬라이드는 4장(표지 · 본문 1 · 본문 2 · 마무리)이고,
+      본문 2 에는 상세 슬라이드가 한 장 달려 있습니다.
+
+      아래 화살표로 상세를 펼치고, 오른쪽 화살표로 다음 기본 슬라이드로 넘어갑니다.
+    </aside>
+  </section>
+
+  <!-- ═══ 기본 2 · 본문 1 (Light) — 요약 카드형 ═══ -->
+  <section class="slide work light" data-toc="첫 번째 주제" data-grp="본문">
+    <h2>첫 번째 주제 — 진행 현황</h2>
+    <p class="lede">슬라이드 한 줄 요약을 적습니다. 카드의 flex 값이 곧 높이 비중(%)이며, 합계를 100 으로 맞춥니다.</p>
+    <div class="trks">
+
+      <div class="trk hero simple" style="flex:50">
+        <div class="main">
+          <div class="hd">
+            <span class="idx">01</span>
+            <h3>주요 과제 A — 한 줄 설명</h3>
+            <span class="st key">주력</span>
+            <span class="when">MM/DD – MM/DD</span>
+          </div>
+          <p class="lead">세부 항목 하나 · 세부 항목 둘 · 세부 항목 셋</p>
+        </div>
+        <div class="stat"><p class="lb">산출물</p><p class="vl">00건</p></div>
+      </div>
+
+      <div class="trk simple" style="flex:20">
+        <div class="main">
+          <div class="hd">
+            <span class="idx">02</span>
+            <h3>과제 B — 한 줄 설명</h3>
+            <span class="when">MM/DD – MM/DD</span>
+          </div>
+          <p class="lead">세부 항목 하나 · 세부 항목 둘</p>
+        </div>
+        <div class="stat"><p class="lb">환경</p><p class="vl">0종</p></div>
+      </div>
+
+      <div class="trk simple" style="flex:30">
+        <div class="main">
+          <div class="hd">
+            <span class="idx">03</span>
+            <h3>과제 C — 한 줄 설명</h3>
+            <span class="when">MM/DD – MM/DD</span>
+          </div>
+          <p class="lead">세부 항목 하나 · 세부 항목 둘 · 세부 항목 셋</p>
+        </div>
+        <div class="stat"><p class="lb">버전</p><p class="vl">v0.0.0</p></div>
+      </div>
+
+    </div>
+    <aside class="notes">
+      본문 1 의 발표자 노트입니다.
+
+      카드 크기가 곧 비중입니다 — 과제 A 50%, 과제 C 30%, 과제 B 20%.
+
+      숫자를 세우고 싶으면 오른쪽 .stat 칸의 라벨(lb)과 값(vl)을 바꿉니다.
+    </aside>
+  </section>
+
+  <!-- ═══ 기본 3 · 본문 2 (Light) — 한 줄 행 + 주력 카드 혼합 ═══ -->
+  <section class="slide work light" data-toc="두 번째 주제" data-grp="본문">
+    <h2>두 번째 주제 — 계획</h2>
+    <p class="lede">마무리된 과제는 한 줄(.trk.row)로 눕히고, 새로 착수한 주력 과제는 큰 카드(.trk.hero.simple)로 세웁니다.</p>
+    <div class="trks">
+
+      <div class="trk row" style="flex:20">
+        <span class="idx">01</span>
+        <h3>마무리 과제 D</h3>
+        <p class="sum">한 줄 요약 — 무엇을 어디까지 했는지</p>
+        <span class="when">~ MM/DD</span>
+        <span class="st done">완료</span>
+      </div>
+
+      <div class="trk row" style="flex:20">
+        <span class="idx">02</span>
+        <h3>마무리 과제 E</h3>
+        <p class="sum">한 줄 요약 — 무엇을 어디까지 했는지</p>
+        <span class="when">~ MM/DD</span>
+        <span class="st done">완료</span>
+      </div>
+
+      <div class="trk hero simple" style="flex:30">
+        <div class="main">
+          <div class="hd">
+            <span class="idx">03</span>
+            <h3>신규 과제 F — 한 줄 설명</h3>
+            <span class="st key">주력</span>
+            <span class="when">MM/DD – MM/DD</span>
+            <span class="st run">진행 중</span>
+          </div>
+          <p class="lead">1단계 정리 → 2단계 설계 → 3단계 구현 착수</p>
+        </div>
+        <div class="stat"><p class="lb">화면</p><p class="vl">00종</p></div>
+      </div>
+
+      <div class="trk hero simple" style="flex:30">
+        <div class="main">
+          <div class="hd">
+            <span class="idx">04</span>
+            <h3>신규 과제 G — 한 줄 설명</h3>
+            <span class="st key">주력</span>
+            <span class="when">MM/DD – MM/DD</span>
+            <span class="st run">진행 중</span>
+          </div>
+          <p class="lead">절차 파악 → 자동화 스크립트 작성 → 계획서 보완</p>
+        </div>
+        <div class="stat"><p class="lb">스크립트</p><p class="vl">0종</p></div>
+      </div>
+
+    </div>
+    <aside class="notes">
+      본문 2 의 발표자 노트입니다.
+
+      위 2건은 마무리된 과제라 한 줄로 두었고, 아래 2건이 새로 착수한 주력 과제입니다.
+
+      세부 내역 질문이 나오면 아래 화살표로 상세 슬라이드를 펼칩니다.
+    </aside>
+  </section>
+
+  <!-- 상세 3-1 · 본문 2 의 상세 (부모와 같은 Light 테마)
+       ※ 상세가 필요 없으면 이 section 을 통째로 지운다 — 번호는 자동으로 다시 매겨진다 -->
+  <section class="slide work light detail" data-toc="두 번째 주제 상세">
+    <h2>두 번째 주제 — 상세</h2>
+    <p class="lede">과제별 세부 내역입니다. 위 화살표를 누르면 요약으로 돌아갑니다.</p>
+    <div class="trks">
+
+      <div class="trk row" style="flex:20">
+        <span class="idx">01</span>
+        <h3>마무리 과제 D</h3>
+        <p class="sum"><span class="mo">v0.0.0~v0.0.0</span> 세부 내역 · <b>강조할 결과</b> 를 굵게 둔다</p>
+        <span class="when">~ MM/DD</span>
+        <span class="st done">완료</span>
+      </div>
+
+      <div class="trk row" style="flex:20">
+        <span class="idx">02</span>
+        <h3>마무리 과제 E</h3>
+        <p class="sum">세부 내역 · <b>강조할 결과</b> · 후속 조치(MM/DD~MM/DD)</p>
+        <span class="when">~ MM/DD</span>
+        <span class="st done">완료</span>
+      </div>
+
+      <div class="trk hero tight" style="flex:30">
+        <div class="hd">
+          <span class="idx">03</span>
+          <h3>신규 과제 F — 한 줄 설명</h3>
+          <span class="st key">주력</span>
+          <span class="when">MM/DD – MM/DD</span>
+          <span class="st run">진행 중</span>
+        </div>
+        <ul class="mini">
+          <li>1단계 — 자료 분류 · <b>구조 설계</b> → 계획서 초안</li>
+          <li>2단계 — <b>결정 사항</b> 정리 · 방식 확정(<span class="mo">옵션 A</span> 채택)</li>
+          <li>3단계 — <span class="mo">v0.0.1</span> 적용 · <span class="mo">v0.0.2</span> 데이터 이관 <b>약 0,000행</b></li>
+        </ul>
+      </div>
+
+      <div class="trk hero tight" style="flex:30">
+        <div class="hd">
+          <span class="idx">04</span>
+          <h3>신규 과제 G — 한 줄 설명</h3>
+          <span class="st key">주력</span>
+          <span class="when">MM/DD – MM/DD</span>
+          <span class="st run">진행 중</span>
+        </div>
+        <ul class="mini">
+          <li>현황 청취(MM/DD) → 절차 파악 · 정리(MM/DD) → <b>주요 단계 정리</b>(MM/DD)</li>
+          <li>스크립트 <b>0종</b> — <span class="mo">script_one</span> ·
+              <span class="mo">script_two</span> · <span class="mo">script_three</span></li>
+          <li><b>계획서</b> <span class="mo">v00000000_01</span> 보완 — <b>~ MM/DD 완료 목표</b></li>
+        </ul>
+      </div>
+
+    </div>
+    <aside class="notes">
+      상세 슬라이드의 발표자 노트입니다.
+
+      질문이 나올 만한 근거 수치·이력을 여기에 적어 둡니다.
+    </aside>
+  </section>
+
+  <!-- ═══ 기본 4 · 마무리 (Dark — 표지와 짝을 이룬다) ═══ -->
+  <section class="slide end" data-toc="감사합니다" data-grp="마무리">
+    <h1>감사합니다</h1>
+    <div class="rule"></div>
+    <p class="who">회사명 · 부서명 · 이름</p>
+    <p class="meta">YYYY-MM-DD 발표 구분 · 대상 기간 YYYY-MM-DD ~ MM-DD</p>
+    <div class="stats">
+      <div><p class="lb">지표 A</p><p class="vl">00건</p></div>
+      <div><p class="lb">지표 B</p><p class="vl">0건</p></div>
+      <div><p class="lb">진행 중</p><p class="vl">과제 F · 과제 G</p></div>
+    </div>
+    <aside class="notes">
+      질문이나 요청 사항을 받습니다.
+
+      상세 내용이 필요하면 왼쪽 화살표로 본문으로 돌아간 뒤
+      아래 화살표로 상세 슬라이드를 펼치면 됩니다.
+
+      다음 보고 시점에 다룰 내용을 한 줄로 예고하며 닫습니다.
+    </aside>
+  </section>
+
+</div>
+<div id="bar"></div>
+<div id="ind"></div>
+<div id="hintDown" hidden>▾ 상세</div>
+<div id="hintUp" hidden>▴ 기본</div>
+
+<div id="ovw" class="ovl" hidden></div>
+<aside id="toc" aria-label="목차" hidden>
+  <h2>CONTENTS</h2>
+  <p class="tsub">발표 구분 · YYYY.MM.DD</p>
+  <nav id="tocNav"></nav>
+  <div class="keys">
+    <kbd>&#8592;</kbd> <kbd>&#8594;</kbd> 기본 이동 &nbsp;·&nbsp; <kbd>&#8595;</kbd> 상세 &nbsp;·&nbsp; <kbd>&#8593;</kbd> 복귀<br>
+    <kbd>O</kbd> 개요 &nbsp;·&nbsp; <kbd>C</kbd> 목차 &nbsp;·&nbsp; <kbd>N</kbd> 노트 &nbsp;·&nbsp; <kbd>F</kbd> 전체화면<br>
+    화면 좌측 클릭 이전 · 우측 다음 · 하단 중앙 상세
+  </div>
+</aside>
+<div id="help" class="ovl" hidden><div class="box">
+  <div class="hcol">
+    <b>단축키</b>
+    <div class="hsplit">
+      <dl class="hk">
+        <dt class="g">이동</dt><dd class="g"></dd>
+        <dt>다음 기본 슬라이드</dt><dd><kbd>&#8594;</kbd><kbd>PgDn</kbd><kbd>Space</kbd></dd>
+        <dt>이전 기본 슬라이드</dt><dd><kbd>&#8592;</kbd><kbd>PgUp</kbd></dd>
+        <dt>상세 슬라이드 진입</dt><dd><kbd>&#8595;</kbd></dd>
+        <dt>기본 슬라이드 복귀</dt><dd><kbd>&#8593;</kbd></dd>
+        <dt>처음 기본 슬라이드</dt><dd><kbd>Home</kbd></dd>
+        <dt>마지막 기본 슬라이드</dt><dd><kbd>End</kbd></dd>
+        <dt>페이지 점프</dt><dd>숫자+<kbd>Enter</kbd></dd>
+        <dt class="g">슬라이드쇼</dt><dd class="g"></dd>
+        <dt>전체화면</dt><dd><kbd>F</kbd></dd>
+        <dt>블랙아웃</dt><dd><kbd>B</kbd></dd>
+      </dl>
+      <dl class="hk">
+        <dt class="g">페이지</dt><dd class="g"></dd>
+        <dt>개요(Outlines)</dt><dd><kbd>O</kbd></dd>
+        <dt>목차</dt><dd><kbd>C</kbd></dd>
+        <dt>도움말</dt><dd><kbd>?</kbd><kbd>/</kbd><kbd>H</kbd></dd>
+        <dt class="g">기능</dt><dd class="g"></dd>
+        <dt>노트</dt><dd><kbd>N</kbd></dd>
+        <dt>편집</dt><dd><kbd>E</kbd></dd>
+        <dt>저장</dt><dd><kbd>Ctrl+S</kbd></dd>
+        <dt>인쇄</dt><dd><kbd>Ctrl+P</kbd></dd>
+      </dl>
+    </div>
+  </div>
+  <div class="hcol">
+    <b>마우스 조작</b>
+    <table class="hz"><tbody>
+      <tr><td>목차 드로어 메뉴</td><td>기본 슬라이드 복귀</td><td class="off">&mdash;</td></tr>
+      <tr><td>이전 기본 슬라이드</td><td>다음 기본 슬라이드</td><td>다음 기본 슬라이드</td></tr>
+      <tr><td class="off">&mdash;</td><td>상세 슬라이드 진입</td><td class="off">&mdash;</td></tr>
+    </tbody></table>
+    <p class="hnote">슬라이드(무대)를 9등분한 칸입니다. 좌상단 햄버거 버튼도 목차를 엽니다.<br>
+      16:9 가 아닌 창의 빈 띠(레터박스) 클릭은 무시됩니다.</p>
+  </div>
+</div></div>
+<div id="blank" hidden></div>
+
+<div id="notes" hidden>
+  <div class="nhead"><b>발표자 노트</b><span id="nhint">N 키로 닫기</span></div>
+  <div id="nview"></div>
+  <textarea id="nedit" spellcheck="false" aria-label="발표자 노트 편집" hidden></textarea>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  'use strict';
+  var W = 1280, H = 720;
+  var $ = function(id){ return document.getElementById(id); };
+  var root = document.documentElement;
+  var stage = $('stage'), bar = $('bar'), ind = $('ind');
+  var ovw = $('ovw'), toc = $('toc'), tocNav = $('tocNav'), help = $('help'), blank = $('blank');
+  var notes = $('notes'), nview = $('nview'), nedit = $('nedit'), nhint = $('nhint');
+  var hintDown = $('hintDown'), hintUp = $('hintUp'), toastEl = $('toast');
+
+  var slides = Array.prototype.slice.call(stage.querySelectorAll('.slide'));
+
+  /* ---------- 2계층 인덱스 ---------- */
+  var bases = [];      /* 기본 슬라이드의 slides 내 인덱스 */
+  var owner = [];      /* slides[i] 가 속한 기본의 0-based 번호 */
+  var sub   = [];      /* 상세면 부모 내 순번(1-based), 기본이면 0 */
+  slides.forEach(function(s, i){
+    var isDetail = s.classList.contains('detail') && bases.length > 0;
+    if (isDetail) { owner[i] = bases.length - 1; sub[i] = (sub[i - 1] || 0) + 1; }
+    else { bases.push(i); owner[i] = bases.length - 1; sub[i] = 0; }
+  });
+  function detailsOf(b){                       /* 기본 b 의 상세 인덱스 배열 */
+    var out = [], i = bases[b] + 1;
+    while (i < slides.length && sub[i] > 0) { out.push(i); i++; }
+    return out;
+  }
+
+  var cur = 0, editing = false, dirty = false, seq = 0, buf = '';
+  seq = parseInt(root.getAttribute('data-edit-seq') || '0', 10) || 0;
+  /* 시작 위치는 반드시 최상단에서 캡처한다.
+     render() 가 replaceState 로 해시를 덮어쓰므로 나중에 읽으면 항상 1페이지가 된다. */
+  var startAt = (location.hash || '').replace(/^#/, '') ||
+                (root.getAttribute('data-start') || '');
+
+  /* ---------- 스케일 ---------- */
+  function fit(){
+    /* 노트 패널이 열려 있으면 그만큼 뺀 영역에 맞춘다 (슬라이드가 가려지지 않게) */
+    var avail = window.innerHeight - (notes.hidden ? 0 : notes.offsetHeight);
+    var s = Math.min(window.innerWidth / W, avail / H);
+    stage.style.top = (avail / 2) + 'px';
+    stage.style.transform = 'translate(-50%,-50%) scale(' + s + ')';
+  }
+  window.addEventListener('resize', fit);
+  document.addEventListener('fullscreenchange', fit);
+  if (window.ResizeObserver) { new ResizeObserver(fit).observe(notes); }
+
+  /* ---------- 노트 ---------- */
+  function readNote(i){
+    var el = slides[i].querySelector('.notes');
+    if (!el) return '';
+    if (el.hasAttribute('data-raw')) return el.textContent;  /* 패널에서 고친 노트 */
+    var lines = el.textContent.replace(/\t/g, '  ').split('\n');
+    while (lines.length && !lines[0].trim()) lines.shift();
+    while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+    var pads = lines.filter(function(l){ return l.trim(); })
+                    .map(function(l){ return l.match(/^ */)[0].length; });
+    var pad = pads.length ? Math.min.apply(null, pads) : 0;
+    return lines.map(function(l){ return l.slice(pad); }).join('\n');
+  }
+  function writeNote(i, text){
+    var el = slides[i].querySelector('.notes');
+    if (!el) { if (!text.trim()) return; el = document.createElement('aside');
+               el.className = 'notes'; slides[i].appendChild(el); }
+    el.setAttribute('data-raw', '');   /* 이후로는 들여쓰기 정규화 대상에서 제외 */
+    el.textContent = text;
+  }
+  function syncNotes(){
+    var t = readNote(cur);
+    nview.textContent = t || '(이 슬라이드의 노트 없음)';
+    if (nedit.value !== t) nedit.value = t;   /* 조건 없이 항상 동기화 */
+  }
+
+  /* ---------- 렌더 ---------- */
+  function render(){
+    slides.forEach(function(s, i){
+      s.classList.toggle('on', i === cur);
+      s.setAttribute('aria-hidden', i === cur ? 'false' : 'true');
+    });
+    /* 화면 고정 크롬(진행바·인디케이터·힌트·햄버거)이 현재 슬라이드 테마를 따라가게 한다.
+       표지·마무리는 Dark, 본문은 Light 라 이 갱신이 없으면 한쪽에서 대비가 무너진다. */
+    document.body.setAttribute('data-ui',
+      slides[cur].classList.contains('light') ? 'light' : 'dark');
+    var b = owner[cur], no = String(b + 1).padStart(2, '0');
+    var label = sub[cur] ? no + '-' + sub[cur] : no;
+    ind.innerHTML =
+      (dirty ? '<span class="dirty">●</span>' : '') +
+      (editing ? '<span class="edit">편집</span>' : '') +
+      (buf ? '<span class="jump">→ ' + buf + '</span> ' : '') +
+      '<b>' + label + '</b> / ' + bases.length;
+    bar.style.width = ((b + 1) / bases.length * 100) + '%';
+
+    var d = detailsOf(b);
+    hintDown.hidden = !(d.length && sub[cur] < d.length);
+    hintDown.textContent = '▾ 상세 ' + (sub[cur] + 1) + '/' + d.length;
+    hintUp.hidden = !sub[cur];
+    syncNotes();
+    history.replaceState(null, '', '#' + (b + 1) + (sub[cur] ? '-' + sub[cur] : ''));
+  }
+  function goIdx(i){ cur = Math.max(0, Math.min(slides.length - 1, i)); render(); }
+  function goBase(b){ goIdx(bases[Math.max(0, Math.min(bases.length - 1, b))]); }
+
+  /* ---------- 이동 ---------- */
+  function nextBase(){ goBase(owner[cur] + 1); }
+  function prevBase(){ goBase(owner[cur] - 1); }
+  function down(){                       /* 기본→첫 상세, 상세→다음 상세 */
+    var d = detailsOf(owner[cur]);
+    if (!d.length) return false;
+    var n = sub[cur];                    /* 기본이면 0 */
+    if (n >= d.length) return false;
+    goIdx(d[n]); return true;
+  }
+  function up(){ if (!sub[cur]) return false; goBase(owner[cur]); return true; }
+
+  /* ---------- 오버레이 ---------- */
+  function closeAll(){ ovw.hidden = true; toc.hidden = true; help.hidden = true; }
+  function anyOpen(){ return !ovw.hidden || !toc.hidden || !help.hidden; }
+  function toggle(el, build){
+    var open = el.hidden;
+    closeAll();
+    if (open) { if (build) build(); el.hidden = false; }
+  }
+  /* 개요는 기본 슬라이드만 대상으로 한다 — 이동도 기본 슬라이드로만 간다 */
+  function buildOvw(){
+    ovw.innerHTML = '';
+    bases.forEach(function(si, b){
+      var c = document.createElement('div');
+      c.className = 'th' + (b === owner[cur] ? ' sel' : '');
+      var box = document.createElement('div'); box.className = 'box';
+      var cl = slides[si].cloneNode(true);
+      cl.classList.remove('on');
+      Array.prototype.forEach.call(cl.querySelectorAll('[contenteditable]'), function(e){
+        e.removeAttribute('contenteditable'); e.removeAttribute('spellcheck'); });
+      box.appendChild(cl); c.appendChild(box);
+      var n = document.createElement('span'); n.className = 'no';
+      var dn = detailsOf(b).length;
+      n.textContent = (b + 1) + (dn ? ' (상세 ' + dn + ')' : '');
+      c.appendChild(n);
+      c.addEventListener('click', function(){ closeAll(); goBase(b); });
+      ovw.appendChild(c);
+    });
+  }
+  /* 드로어의 머리말(CONTENTS)·꼬리말(단축키)은 정적 마크업이므로
+     목록만 #tocNav 안에서 다시 만든다. #toc 를 통째로 비우면 그 둘이 사라진다. */
+  function buildToc(){
+    tocNav.innerHTML = '';
+    var ol = document.createElement('ol'), grp = null;
+    slides.forEach(function(s, i){
+      var g = s.getAttribute('data-grp');
+      if (g && g !== grp && !sub[i]) {
+        grp = g;
+        var p = document.createElement('li');
+        p.className = 'grp'; p.textContent = g; ol.appendChild(p);
+      }
+      var li = document.createElement('li');
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = (sub[i] ? 'det' : '') + (i === cur ? ' cur' : '');
+      var n = document.createElement('span');           /* 번호 열 — 상세는 비운다 */
+      n.className = 'n';
+      n.textContent = sub[i] ? '' : String(owner[i] + 1);
+      var t = document.createElement('span');
+      t.textContent = s.getAttribute('data-toc') || '(제목 없음)';
+      b.appendChild(n); b.appendChild(t);
+      b.addEventListener('click', function(){ closeAll(); goIdx(i); });
+      li.appendChild(b); ol.appendChild(li);
+    });
+    tocNav.appendChild(ol);
+  }
+
+  /* ---------- 편집 ---------- */
+  function markEditable(){
+    var sel = 'h1,h2,h3,p,li,pre';
+    slides.forEach(function(s){
+      Array.prototype.forEach.call(s.querySelectorAll(sel), function(el){
+        if (el.closest('.notes')) return;
+        if (el.querySelector(sel)) return;       /* 중첩 방지 */
+        el.setAttribute('data-editable', 'true');
+      });
+    });
+  }
+  function setEditing(on){
+    editing = Boolean(on);
+    document.body.classList.toggle('is-editing', editing);
+    Array.prototype.forEach.call(stage.querySelectorAll('[data-editable]'), function(el){
+      if (editing) { el.setAttribute('contenteditable', 'true');
+                     el.setAttribute('spellcheck', 'false'); }
+      else { el.removeAttribute('contenteditable'); el.removeAttribute('spellcheck'); }
+    });
+    nview.hidden = editing; nedit.hidden = !editing;
+    nhint.textContent = editing ? '이 칸에서 노트를 고칠 수 있습니다' : 'N 키로 닫기';
+    /* 노트 패널의 열림/닫힘은 N 키만 결정한다 — 편집 모드는 여닫지 않는다.
+       열려 있으면 본문과 노트를 함께, 닫혀 있으면 본문만 편집한다. */
+    fit();
+    render();
+    toast(editing ? '편집 모드 — 고친 뒤 <b>Ctrl+S</b>' : '편집 종료');
+  }
+  function insertPlain(e){
+    if (!editing || !e.target.closest || !e.target.closest('[contenteditable="true"]')) return;
+    e.preventDefault();
+    document.execCommand('insertText', false,
+      (e.clipboardData || e.dataTransfer).getData('text/plain'));
+  }
+  stage.addEventListener('paste', insertPlain);
+  stage.addEventListener('drop', insertPlain);
+  stage.addEventListener('beforeinput', function(e){
+    if (editing && e.inputType === 'insertParagraph' &&
+        e.target.closest && e.target.closest('[contenteditable="true"]')) {
+      e.preventDefault(); document.execCommand('insertLineBreak');
+    }
+  });
+  stage.addEventListener('input', function(){ if (editing) setDirty(true); });
+  nedit.addEventListener('input', function(){
+    if (!editing) return;                        /* 쓰기 경로 권한 가드 */
+    writeNote(cur, nedit.value); setDirty(true);
+  });
+  function inField(t){
+    return t instanceof Element &&
+      (t.closest('[contenteditable="true"]') || t.closest('input,textarea,select'));
+  }
+
+  /* ---------- 저장 ---------- */
+  function setDirty(v){ dirty = Boolean(v); render(); }
+  window.addEventListener('beforeunload', function(e){
+    if (!dirty) return;
+    e.preventDefault(); e.returnValue = ''; return '';
+  });
+  function toast(html, sec){
+    toastEl.innerHTML = html; toastEl.classList.add('on');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ toastEl.classList.remove('on'); }, (sec || 2.6) * 1000);
+  }
+  function serialize(next){
+    var c = document.documentElement.cloneNode(true);
+    c.setAttribute('data-start', (owner[cur] + 1) + (sub[cur] ? '-' + sub[cur] : ''));
+    c.setAttribute('data-edit-seq', String(next));
+    c.querySelector('body').classList.remove('is-editing');
+    Array.prototype.forEach.call(c.querySelectorAll('.slide'), function(el){
+      el.classList.remove('on'); el.removeAttribute('aria-hidden'); });
+    Array.prototype.forEach.call(c.querySelectorAll('[contenteditable]'), function(el){
+      el.removeAttribute('contenteditable'); el.removeAttribute('spellcheck'); });
+    Array.prototype.forEach.call(c.querySelectorAll('[data-editable]'), function(el){
+      el.removeAttribute('data-editable'); });
+    c.querySelector('#ovw').innerHTML = '';      /* 썸네일 캐시 — 비우지 않으면 누적 */
+    c.querySelector('#tocNav').innerHTML = '';   /* 드로어는 목록만 비운다 (머리말·꼬리말 보존) */
+    c.querySelector('body').removeAttribute('data-ui');   /* 로드 시 render() 가 다시 정한다 */
+    ['#ovw','#toc','#help','#blank','#notes'].forEach(function(s){
+      c.querySelector(s).setAttribute('hidden',''); });
+    c.querySelector('#nview').textContent = '';
+    c.querySelector('#nview').removeAttribute('hidden');
+    c.querySelector('#nedit').textContent = '';
+    c.querySelector('#nedit').setAttribute('hidden','');
+    c.querySelector('#nhint').textContent = 'N 키로 닫기';
+    var t = c.querySelector('#toast'); t.className = ''; t.innerHTML = '';
+    c.querySelector('#ind').innerHTML = '';
+    c.querySelector('#bar').style.removeProperty('width');
+    c.querySelector('#stage').style.removeProperty('transform');
+    c.querySelector('#stage').style.removeProperty('top');
+    c.querySelector('#hintDown').setAttribute('hidden','');
+    c.querySelector('#hintUp').setAttribute('hidden','');
+    return '<!DOCTYPE html>\n' + c.outerHTML;
+  }
+  function save(){
+    var next = seq + 1;
+    var data = serialize(next);
+    var blob = new Blob([data], { type:'text/html;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var base = (document.title || 'slide')
+                 .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+                 .replace(/_edited_\d+$/, '');
+    var name = base + '_edited_' + next + '.html';
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 3000);
+    seq = next; setDirty(false);
+    toast('저장됨 · <b>' + name + '</b> (' + Math.round(blob.size / 1024) + ' KB)');
+  }
+
+  /* ---------- 숫자 점프 ---------- */
+  function jump(){
+    if (!buf) return;                            /* 빈 Enter 는 제자리 */
+    var n = parseInt(buf, 10); buf = '';
+    goBase(n - 1);
+  }
+  function clearBuf(){ if (buf) { buf = ''; render(); } }
+
+  /* ---------- 키보드 ---------- */
+  document.addEventListener('keydown', function(e){
+    var k = e.key, low = k.toLowerCase();
+
+    if ((e.ctrlKey || e.metaKey) && low === 's') { e.preventDefault(); save(); return; }
+    if ((e.ctrlKey || e.metaKey) && low === 'p') { return; }   /* 브라우저 인쇄에 위임 */
+    if (editing && k === 'Escape') { e.preventDefault(); setEditing(false); return; }
+    if (inField(e.target)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    if (!blank.hidden) {                          /* 블랭크 중에는 해제만 */
+      if (low === 'b' || k === 'Escape') { e.preventDefault(); blank.hidden = true; }
+      return;
+    }
+    if (anyOpen()) {                              /* 오버레이 중에는 닫기만 */
+      if (k === 'Escape' || low === 'c' || low === 'o' ||
+          low === 'h' || k === '?' || k === '/') { e.preventDefault(); closeAll(); }
+      return;
+    }
+
+    if (k >= '0' && k <= '9') { e.preventDefault(); buf = (buf + k).slice(0, 3); render(); return; }
+    if (k === 'Enter') { e.preventDefault(); jump(); render(); return; }
+    clearBuf();                                   /* 그 밖의 키는 버퍼를 버린다 */
+
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') { e.preventDefault(); nextBase(); }
+    else if (k === 'ArrowLeft' || k === 'PageUp')             { e.preventDefault(); prevBase(); }
+    else if (k === 'ArrowDown') { e.preventDefault(); down(); }
+    else if (k === 'ArrowUp')   { e.preventDefault(); up(); }
+    else if (k === 'Home')      { e.preventDefault(); goBase(0); }
+    else if (k === 'End')       { e.preventDefault(); goBase(bases.length - 1); }
+    /* Esc 는 닫기·빠져나오기 전용이다 — 개요를 여는 것은 O 만이다 */
+    else if (low === 'o')       { e.preventDefault(); toggle(ovw, buildOvw); }
+    else if (low === 'c')       { e.preventDefault(); toggle(toc, buildToc); }
+    else if (low === 'n')       { e.preventDefault();
+      notes.hidden = !notes.hidden; fit(); }
+    else if (low === 'h' || k === '?' || k === '/') { e.preventDefault(); toggle(help); }
+    else if (low === 'b')       { e.preventDefault(); blank.hidden = false; }
+    else if (low === 'f')       { e.preventDefault(); fullscreen(); }
+    /* 테마 전환(T) 은 두지 않는다 — 슬라이드마다 테마가 고정되어 있다 */
+    else if (low === 'e')       { e.preventDefault(); setEditing(!editing); }
+  });
+
+  /* ---------- 목차 드로어 ---------- */
+  $('menuBtn').addEventListener('click', function(){ toggle(toc, buildToc); });
+  /* 스크림(#toc::after)을 누르면 닫는다. 항목 버튼 클릭은 target 이 달라 걸리지 않는다. */
+  toc.addEventListener('click', function(e){ if (e.target === toc) closeAll(); });
+
+  /* ---------- 전체화면 (실패 가능 — 반드시 감싼다) ---------- */
+  function fullscreen(){
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else if (root.requestFullscreen) { root.requestFullscreen(); }
+      else { toast('이 브라우저에서는 전체화면을 쓸 수 없습니다'); }
+    } catch (_) { toast('브라우저가 전체화면을 허용하지 않았습니다'); }
+  }
+
+  /* ---------- 마우스 3x3 존 ---------- */
+  function zoneOf(e){
+    var r = stage.getBoundingClientRect();
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    if (x < 0 || y < 0 || x > r.width || y > r.height) return null;
+    return { col: x < r.width / 3 ? 0 : x < r.width * 2 / 3 ? 1 : 2,
+             row: y < r.height / 3 ? 0 : y < r.height * 2 / 3 ? 1 : 2 };
+  }
+  function zoneAction(col, row){
+    if (col === 0 && row === 1) prevBase();            /* left-center   이전 기본 */
+    else if (col === 2 && row === 1) nextBase();       /* right-center  다음 기본 */
+    else if (col === 1 && row === 2) down();           /* center-bottom 상세 진입 */
+    else if (col === 1 && row === 0) up();             /* center-top    기본 복귀 */
+    else if (col === 0 && row === 0) toggle(toc, buildToc);  /* left-top 목차 */
+    else if (col === 1 && row === 1) nextBase();       /* center-center 다음 기본 */
+    /* right-top(2,0) · left-bottom(0,2) · right-bottom(2,2) 은 기능 없음 */
+  }
+  stage.addEventListener('click', function(e){
+    if (editing || anyOpen() || !blank.hidden) return;
+    var z = zoneOf(e);
+    if (!z) return;
+    clearBuf();
+    zoneAction(z.col, z.row);
+  });
+
+  /* ---------- 기동 ---------- */
+  function start(){
+    var h = /^(\d+)(?:-(\d+))?$/.exec(startAt);
+    if (h) {
+      var b = Math.max(0, Math.min(bases.length - 1, parseInt(h[1], 10) - 1));
+      var d = h[2] ? detailsOf(b)[parseInt(h[2], 10) - 1] : undefined;
+      goIdx(d === undefined ? bases[b] : d);
+    } else { render(); }
+  }
+  markEditable();
+  setEditing(false);
+  toastEl.classList.remove('on');
+  fit();
+  start();
+
+  window.Deck = {
+    goBase:goBase, goIdx:goIdx, next:nextBase, prev:prevBase, down:down, up:up,
+    setEditing:setEditing, save:save, serialize:function(){ return serialize(seq + 1); },
+    readNote:function(i){ return readNote(i === undefined ? cur : i); },
+    zone:zoneAction, zoneOf:zoneOf,
+    getState:function(){
+      return { idx:cur, base:owner[cur] + 1, sub:sub[cur], bases:bases.length,
+               editing:editing, dirty:dirty, seq:seq, buf:buf,
+               theme:slides[cur].classList.contains('light') ? 'light' : 'dark',
+               ui:document.body.getAttribute('data-ui'),
+               ovw:!ovw.hidden, toc:!toc.hidden, help:!help.hidden,
+               blank:!blank.hidden, notes:!notes.hidden };
+    }
+  };
+})();
+</script>
+</body>
+</html>
